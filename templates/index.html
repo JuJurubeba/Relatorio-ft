@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Fotográfico</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Relatório Fotográfico</h1>
+
+    <div class="input-imagem">
+        <input type="file" id="upload-imagem" accept="image/*" multiple>
+    </div>
+
+    <div id="imagens-container">
+       
+    </div>
+
+    <button id="gerarRelatorio">Gerar Relatório</button>
+
+    <script>
+        
+        document.getElementById('upload-imagem').addEventListener('change', function(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imagemContainer = document.createElement('div');
+                        imagemContainer.classList.add('imagem-container');
+                        
+                        const img = document.createElement('img');
+                        img.src = e.target.result; 
+                        img.alt = 'Imagem carregada';
+                        img.style.width = '400px'; 
+                        img.style.height = 'auto';
+
+                        const legendaInput = document.createElement('textarea');
+                        legendaInput.classList.add('legenda');
+                        legendaInput.placeholder = 'Digite a legenda para esta imagem...';
+
+                        imagemContainer.appendChild(img);
+                        imagemContainer.appendChild(legendaInput);
+
+                        document.getElementById('imagens-container').appendChild(imagemContainer);
+                    };
+                    reader.readAsDataURL(file); 
+                });
+            }
+        });
+
+        document.getElementById('gerarRelatorio').addEventListener('click', function() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            let yPosition = 10; 
+            const imageWidth = 170; 
+            const gapBetweenImages = 10; 
+            const gapBetweenImageAndCaption = 5; 
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+
+            const imagens = document.querySelectorAll('.imagem-container');
+            imagens.forEach(function(container, index) {
+                const imagemSrc = container.querySelector('img').src; 
+                const legendaTexto = container.querySelector('.legenda').value; 
+
+                const img = new Image();
+                img.src = imagemSrc;
+
+                img.onload = function() {
+                    const aspectRatio = img.width / img.height; 
+                    const newHeight = imageWidth / aspectRatio; 
+
+                    if (newHeight > 280) {
+                        const scaleFactor = 280 / newHeight; 
+                        img.height = 280; 
+                        img.width = imageWidth * scaleFactor; 
+                    } else {
+                        img.height = newHeight; 
+                        img.width = imageWidth; 
+                    }
+
+                    
+                    const xPosition = (pageWidth - img.width) / 2;
+
+                    doc.addImage(img, 'JPEG', xPosition, yPosition, img.width, img.height);
+                    
+                    yPosition += img.height + gapBetweenImageAndCaption;
+
+                    const textWidth = doc.getTextWidth(legendaTexto);
+                    const textXPosition = (pageWidth - textWidth) / 2;
+                    doc.text(legendaTexto, textXPosition, yPosition); 
+
+                    yPosition += gapBetweenImages;
+
+                    if (yPosition + img.height > doc.internal.pageSize.height && (index + 1) !== imagens.length) {
+                        doc.addPage(); 
+                        yPosition = 10; 
+                    }
+
+                    if (index === imagens.length - 1) {
+                        doc.save('relatorio_fotografico.pdf');
+                    }
+                };
+            });
+        });
+    </script>
+
+</body>
+</html>
